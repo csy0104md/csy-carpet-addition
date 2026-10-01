@@ -1,0 +1,96 @@
+# CSY Carpet Addition
+
+一个 Carpet 拓展（Carpet Addition）：让岩浆块可以像铁轨一样连接周围的铁轨，并让岩浆块拥有可沿铁轨线路传播的 `powered` 激活状态。
+
+- Mod ID：`csy-carpet-addition`
+- 开源协议：[MIT](LICENSE)
+
+## 规则
+
+| 规则 | 默认值 | 说明 |
+| --- | --- | --- |
+| `magmaBlockConnectsRails` | `false` | 岩浆块可以像铁轨一样连接其他铁轨：不改变岩浆块原版行为，只增加连接铁轨的特性 |
+| `magmaBlockPoweredState` | `false` | 岩浆块拥有 `powered` 两种激活状态、可以卡 BUD 态，并沿相连的铁轨线路传播激活（实验性，依赖 `magmaBlockConnectsRails`） |
+
+开启后，和岩浆块相邻的铁轨都会像对面是铁轨一样朝岩浆块连接，包括：
+
+- 东西南北四个方向（同一高度）；
+- 斜上方、斜下方各一格的方向（会连成上坡/下坡）。
+
+因此「铁轨 — 岩浆块 — 铁轨」会连成一条贯通的线路，岩浆块四周有铁轨时也会各自朝它连接，形成路口。
+
+连接使用的是原版铁轨自己的连接逻辑（和铁轨连铁轨走的是同一套判断），所以形状和原版铁轨完全一致。
+
+**更新顺序也和原版铁轨一致**：岩浆块放置时刷新周围铁轨的顺序，用的是原版 `RailPlacementHelper` 判定连接时的顺序——北 → 南 → 西 → 东，每个方向先看同高度，再看上方一格，最后看下方一格（也就是原版 `getNeighboringRail` 的检查顺序）。
+
+### `magmaBlockPoweredState`（实验性，依赖 `magmaBlockConnectsRails`）
+
+让岩浆块像**激活铁轨 / 动力铁轨**一样拥有 `powered` 激活状态：
+
+- 岩浆块有两种状态：`magma_block[powered=false]` 和 `magma_block[powered=true]`；默认是 `false`。
+- 放置时会根据当前位置是否被红石充能决定初始状态；之后**只有收到方块更新时才会重新计算**（和动力铁轨同样的机制）。
+- 因此可以卡出 **BUD 态**：比如电源被"无更新"地移除（`/carpet fillUpdates false`、更新抑制机器等）时，岩浆块会继续保持 `powered=true`，直到再次收到方块更新。
+- 依赖规则 `magmaBlockConnectsRails`：基础规则没开时无法开启这条规则（命令会被拒绝并提示）。
+- **激活会沿铁轨线路传播**（和动力铁轨一样）：岩浆块被红石充能时它会亮起 `powered=true`，与它相连的动力铁轨 / 激活铁轨也会跟着通电（反过来，连线上有铁轨被红石充能时岩浆块也会变 `powered=true`）。整条线路最多 8 格，而且必须有**真实的红石电源**接在铁轨或岩浆块上，所以卡出来的过期 BUD 态不会自己把线路一直点亮——电源被移除后，下一次更新时整条线路会一起熄灭。
+- 岩浆块可以串成一串：`铁轨 — 岩浆块 — 岩浆块 — 铁轨` 会当作一整条线路，中间的岩浆块也会跟着亮/灭。
+- 除此之外 `powered` 不影响岩浆块的原版行为（伤害、气泡柱都不变）。可以用 F3、调试棒、结构方块、scarpet 等读取。
+
+> ⚠️ 实验性提示
+>
+> - 这个特性会给**原版岩浆块增加一个方块状态属性** `powered`，岩浆块的状态数从 1 变 2，注册表里排在岩浆块之后的**所有方块状态 id 都会 +1**。区块数据就是按这个全局 id 发送的，所以**客户端必须安装同一个 jar**；否则客户端会按自己那张表解码，典型症状就是**楼梯 / 原木 / 观察者等有朝向的方块朝向、形状解错**（看起来像"旋转角度错了"）。两边 jar 必须完全一致（版本不同也会错位）。
+> - 关掉规则只是停止刷新 `powered`：属性本身依然存在，已经变成 `powered=true` 的岩浆块不会自动变回去（需要一次方块更新或重新放置）。
+> - 如果其他 mod 也会给岩浆块加属性/缓存岩浆块状态，可能有冲突。
+
+**破坏岩浆块时不会刷新周围的铁轨**：铁轨会保留连接时得到的形状，直到有其他变化（比如红石信号、铁轨自身的更新）让它重新计算为止。放置岩浆块的瞬间会刷新一次，让周围铁轨连上。
+
+岩浆块的原版行为完全不变（踩上去的伤害、上方的气泡柱、红石相关属性都不受影响）。关闭规则时行为与原版完全一致。
+
+### 开启方式
+
+游戏内：
+
+```
+/carpet magmaBlockConnectsRails true
+```
+
+或者写进服务端的 `config/carpet.conf`：
+
+```
+magmaBlockConnectsRails true
+```
+
+## 构建
+
+```
+gradlew build
+```
+
+产物在 `build/libs/csy-carpet-addition-<version>.jar`，放进服务端（或客户端）的 `mods` 文件夹即可，需要同时安装 Carpet。
+
+## 适配版本
+
+- Minecraft 1.21
+- Fabric Loader 0.15.11 及以上
+- Carpet 1.4.147（对应 `1.21-1.4.147+v240613`）
+
+## 实现说明
+
+原版铁轨的连接判断在 `RailPlacementHelper` 里：
+
+- `getNeighboringRail` / `isVerticallyNearRail` 只认真正的铁轨方块；
+- `canConnect` 决定某个方向能否接上；
+- `RailBlock#updateBlockState` 只有在「发出红石信号的方块更新且周围铁轨数为 3」时才会重算形状。
+
+所以本 mod 做了这几件事：
+
+1. `RailPlacementHelper#getNeighboringRail` 找不到铁轨时，把岩浆块也当成一个「邻居铁轨」返回（用一个动力铁轨状态构造 helper），因为岩浆块没有 shape 属性，不能直接当成铁轨方块；
+2. `RailPlacementHelper#isNeighbor(BlockPos)`：岩浆块的 helper 认为任何水平相邻的位置都是它的邻居，所以它会朝四周连接；
+3. `RailPlacementHelper#computeRailShape`：对岩浆块的 helper 直接取消，保证任何时候都不会把 shape 写回世界（否则岩浆块会被铁轨方块替换掉）；
+4. `AbstractRailBlock#isRail(World, BlockPos)` 把岩浆块也当作铁轨，用于上坡/下坡判定和 `getNeighborCount`；
+5. 岩浆块被放置时，主动让可能连上它的 12 个位置上的铁轨重算形状（因为原版铁轨会忽略非红石信号方块的更新），顺序按原版铁轨的判定顺序：北 → 南 → 西 → 东，每个方向 同高度 → 上方 → 下方；
+6. 岩浆块被破坏时**不做**第 5 步，因此周围铁轨的形状保持原样；
+7. 岩浆块本身的方块、行为一律不改（`magmaBlockPoweredState` 规则开启时会给它加一个 `powered` 属性，见上文实验性提示）。
+
+## 开源协议
+
+本项目使用 [MIT](LICENSE) 协议开源。
