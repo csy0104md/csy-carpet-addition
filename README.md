@@ -3,6 +3,7 @@
 一个 Carpet 拓展（Carpet Addition）：让岩浆块可以像铁轨一样连接周围的铁轨，并让岩浆块拥有可沿铁轨线路传播的 `powered` 激活状态。
 
 - Mod ID：`csy-carpet-addition`
+- 源码仓库：<https://github.com/csy0104md/csy-carpet-addition>
 - 开源协议：[MIT](LICENSE)
 
 ## 规则
@@ -43,7 +44,29 @@
 
 **破坏岩浆块时不会刷新周围的铁轨**：铁轨会保留连接时得到的形状，直到有其他变化（比如红石信号、铁轨自身的更新）让它重新计算为止。放置岩浆块的瞬间会刷新一次，让周围铁轨连上。
 
-岩浆块的原版行为完全不变（踩上去的伤害、上方的气泡柱、红石相关属性都不受影响）。关闭规则时行为与原版完全一致。
+岩浆块的原版行为完全不变（踩上去的伤害、上方的气泡柱、红石相关属性都不受影响）。关闭规则时行为与原版完全一致。
+
+### 开启方式
+
+游戏内：
+
+```
+/carpet magmaBlockConnectsRails true
+```
+
+或者写进服务端的 `config/carpet.conf`：
+
+```
+magmaBlockConnectsRails true
+```
+
+## 构建
+
+```
+gradlew build
+```
+
+产物在 `build/libs/csy-carpet-addition-<version>.jar`，放进服务端（或客户端）的 `mods` 文件夹即可，需要同时安装 Carpet。
 
 ## 适配版本
 
@@ -71,4 +94,4 @@
 
 ## 开源协议
 
-本项目使用 [MIT](LICENSE) 协议开源。
+本项目使用 [MIT](LICENSE) 协议开源，源码仓库：<https://github.com/csy0104md/csy-carpet-addition>。
